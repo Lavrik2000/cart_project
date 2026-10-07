@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Мэш-симулятор тележки</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Мэш-симулятор тележки</h1>
+
+    <div class="layout">
+        <canvas id="scene" width="900" height="640"></canvas>
+
+        <aside class="panel">
+            <h2>Ручное управление</h2>
+            <div class="pad">
+                <button data-cmd="forward"  class="btn up">W</button>
+                <button data-cmd="left"     class="btn left">A</button>
+                <button data-cmd="stop"     class="btn stop">■</button>
+                <button data-cmd="right"    class="btn right">D</button>
+                <button data-cmd="backward" class="btn down">S</button>
+            </div>
+
+            <h2>Автономная цель</h2>
+            <p class="hint">Кликните по canvas, чтобы задать цель,<br>
+               или введите координаты вручную:</p>
+            <div class="target-form">
+                <label>x, м <input id="tx" type="number" step="0.1" value="7"></label>
+                <label>y, м <input id="ty" type="number" step="0.1" value="2"></label>
+                <button id="goto">Перейти</button>
+                <button id="cancel" class="secondary">Отмена</button>
+            </div>
+
+            <h2>Шум канала</h2>
+            <label class="slider">
+                <input id="noise" type="range" min="0" max="0.5" step="0.01" value="0.05">
+                <span id="noise-val">0.05 м</span>
+            </label>
+
+            <h2>Телеметрия</h2>
+            <ul class="telemetry">
+                <li>истина: <span id="t-true">—</span></li>
+                <li>оценка: <span id="t-est">—</span></li>
+                <li>ошибка: <span id="t-err">—</span></li>
+                <li>угол: <span id="t-angle">—</span>°</li>
+                <li>левый: <span id="t-left">—</span></li>
+                <li>правый: <span id="t-right">—</span></li>
+                <li>WS: <span id="t-ws">подключение…</span></li>
+            </ul>
+
+            <h2>Дистанции до якорей</h2>
+            <ul class="distances" id="distances"></ul>
+        </aside>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
