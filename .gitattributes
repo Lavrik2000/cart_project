@@ -1,0 +1,13 @@
+* text=auto
+
+# Python
+*.py text
+*.pyw text
+
+# HTML/CSS/JS
+*.html text
+*.css text
+*.js text
+
+# Markdown
+*.md text

@@ -37,7 +37,7 @@ function c2m(cx, cy) {
     return [t.mx0 + (cx - t.offsetX) / t.scale,
             t.my1 - (cy - t.offsetY) / t.scale];
 }
-function mLen(v) { return v * transform.scale; }   // метры → пиксели
+function mLen(v) { return v * transform.scale; }
 
 // ---------------------------------------------------------------- WebSocket
 let ws;
@@ -57,7 +57,6 @@ function drawGrid() {
     const m = state.mesh;
     const t = transform;
 
-    // Поле
     const [x0, y0] = m2c(m.min_x, m.max_y);
     const [x1, y1] = m2c(m.max_x, m.min_y);
     ctx.fillStyle = '#f8fafc';
@@ -66,7 +65,6 @@ function drawGrid() {
     ctx.lineWidth = 2;
     ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
 
-    // Сетка 1 м
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     for (let mx = Math.ceil(m.min_x); mx <= m.max_x; mx++) {
@@ -84,22 +82,20 @@ function drawGrid() {
         ctx.fillText(`${my} м`, x0 + 4, cy - 2);
     }
 
-    // Оси системы координат мэша
     const [ox, oy] = m2c(m.min_x, m.min_y);
-    ctx.strokeStyle = '#ef4444';   // X
+    ctx.strokeStyle = '#ef4444';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + 40, oy); ctx.stroke();
     ctx.fillStyle = '#ef4444'; ctx.font = 'bold 12px system-ui';
     ctx.fillText('X', ox + 44, oy + 4);
 
-    ctx.strokeStyle = '#22c55e';   // Y
+    ctx.strokeStyle = '#22c55e';
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, oy - 40); ctx.stroke();
     ctx.fillStyle = '#22c55e';
     ctx.fillText('Y', ox - 4, oy - 44);
 }
 
 function drawDistanceCircles() {
-    const r = state.mesh.noise_std;
     ctx.save();
     ctx.setLineDash([6, 6]);
     ctx.lineWidth = 1.5;
@@ -129,7 +125,6 @@ function drawDistanceLines() {
         ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(cx, cy); ctx.stroke();
 
-        // Подпись расстояния — по середине линии
         const mx = (ax + cx) / 2, my = (ay + cy) / 2;
         const label = d.toFixed(2) + ' м';
         const w = ctx.measureText(label).width + 8;
@@ -145,13 +140,11 @@ function drawAnchors() {
     for (const a of state.anchors) {
         const [cx, cy] = m2c(a.x, a.y);
 
-        // Пульсирующий радиус действия
         ctx.beginPath();
         ctx.arc(cx, cy, 18, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(167, 139, 250, .18)';
         ctx.fill();
 
-        // Иконка «вышка»: круг + крест
         ctx.beginPath();
         ctx.arc(cx, cy, 10, 0, Math.PI * 2);
         ctx.fillStyle = '#a78bfa';
@@ -166,24 +159,42 @@ function drawAnchors() {
         ctx.moveTo(cx, cy - 5); ctx.lineTo(cx, cy + 5);
         ctx.stroke();
 
-        // Метка якоря
         ctx.fillStyle = '#a78bfa';
         ctx.font = 'bold 13px system-ui';
         ctx.fillText(a.id, cx + 14, cy - 10);
     }
 }
 
+// Полифилл для ctx.roundRect (Safari < 16, Chrome < 99)
+function rrect(context, x, y, w, h, r) {
+    if (typeof context.roundRect === 'function') {
+        context.beginPath();
+        context.roundRect(x, y, w, h, r);
+        return;
+    }
+    const rad = Math.min(r, w / 2, h / 2);
+    context.beginPath();
+    context.moveTo(x + rad, y);
+    context.lineTo(x + w - rad, y);
+    context.arcTo(x + w, y, x + w, y + rad, rad);
+    context.lineTo(x + w, y + h - rad);
+    context.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+    context.lineTo(x + rad, y + h);
+    context.arcTo(x, y + h, x, y + h - rad, rad);
+    context.lineTo(x, y + rad);
+    context.arcTo(x, y, x + rad, y, rad);
+    context.closePath();
+}
+
 function drawCart(cx, cy, angle) {
     ctx.save();
     ctx.translate(cx, cy);
-    // В canvas Y вниз, поэтому знак угла инвертируется
     ctx.rotate(-angle);
 
     const scale = transform.scale;
-    const L = 0.7 * scale;   // длина корпуса, м
-    const Wd = 0.5 * scale;  // ширина
+    const L = 0.7 * scale;
+    const Wd = 0.5 * scale;
 
-    // Тень
     ctx.save();
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = '#000';
@@ -192,7 +203,6 @@ function drawCart(cx, cy, angle) {
     ctx.fill();
     ctx.restore();
 
-    // Колёса
     ctx.fillStyle = '#111827';
     const wW = L * 0.18, wH = Wd * 0.14;
     ctx.fillRect(-L / 2 + 4, -Wd / 2 - wH / 2 + 2, wW, wH);
@@ -200,19 +210,14 @@ function drawCart(cx, cy, angle) {
     ctx.fillRect( L / 2 - wW - 4, -Wd / 2 - wH / 2 + 2, wW, wH);
     ctx.fillRect( L / 2 - wW - 4,  Wd / 2 - wH / 2 - 2, wW, wH);
 
-    // Корпус
     ctx.fillStyle = '#3b82f6';
-    ctx.beginPath();
-    ctx.roundRect(-L / 2, -Wd / 2, L, Wd, 8);
+    rrect(ctx, -L / 2, -Wd / 2, L, Wd, 8);
     ctx.fill();
 
-    // Кабина
     ctx.fillStyle = '#1d4ed8';
-    ctx.beginPath();
-    ctx.roundRect(-L * 0.15, -Wd * 0.3, L * 0.4, Wd * 0.6, 6);
+    rrect(ctx, -L * 0.15, -Wd * 0.3, L * 0.4, Wd * 0.6, 6);
     ctx.fill();
 
-    // Указатель «носа»
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
     ctx.moveTo(L / 2 + 8, 0);
@@ -247,7 +252,6 @@ function drawTarget() {
     if (!t) return;
     const [cx, cy] = m2c(t[0], t[1]);
 
-    // Пульс
     const phase = (performance.now() / 500) % 1;
     const r = 12 + phase * 20;
     ctx.beginPath();
@@ -256,7 +260,6 @@ function drawTarget() {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Крестовина
     ctx.strokeStyle = '#ef4444';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
@@ -267,28 +270,38 @@ function drawTarget() {
 
 // ---------------------------------------------------------------- render
 function render() {
-    if (!transform) transform = computeTransform();
+    try {
+        if (!transform) transform = computeTransform();
 
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, W, H);
 
-    drawGrid();
-    drawDistanceCircles();
-    drawDistanceLines();
-    drawAnchors();
-    drawEstimate();
-    drawTarget();
+        if (!state.cart || !state.mesh) {
+            // Данные ещё не пришли — рисуем только фон, но цикл продолжаем
+            requestAnimationFrame(render);
+            return;
+        }
 
-    // Тележка
-    const [cx, cy] = m2c(state.cart.x, state.cart.y);
-    drawCart(cx, cy, state.cart.angle);
+        drawGrid();
+        drawDistanceCircles();
+        drawDistanceLines();
+        drawAnchors();
+        drawEstimate();
+        drawTarget();
 
-    // Подпись «истинное положение»
-    ctx.fillStyle = '#334155';
-    ctx.font = 'bold 11px system-ui';
-    ctx.fillText(`истина (${state.cart.x.toFixed(2)}, ${state.cart.y.toFixed(2)}) м`,
-                 cx + 14, cy + 28);
+        const [cx, cy] = m2c(state.cart.x, state.cart.y);
+        drawCart(cx, cy, state.cart.angle);
 
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 11px system-ui';
+        ctx.fillText(`истина (${state.cart.x.toFixed(2)}, ${state.cart.y.toFixed(2)}) м`,
+                     cx + 14, cy + 28);
+    } catch (err) {
+        if (!render._errLogged) {
+            console.error('render error:', err);
+            render._errLogged = true;
+        }
+    }
     requestAnimationFrame(render);
 }
 
@@ -302,6 +315,7 @@ function speedLabel(v) {
     return v > 0 ? '▲' : v < 0 ? '▼' : '·';
 }
 function updateSidebar() {
+    if (!state.cart) return;
     const c = state.cart;
     document.getElementById('t-true').textContent =
         `(${c.x.toFixed(2)}, ${c.y.toFixed(2)})`;
@@ -316,7 +330,6 @@ function updateSidebar() {
     document.getElementById('t-left').textContent = speedLabel(c.left_speed);
     document.getElementById('t-right').textContent = speedLabel(c.right_speed);
 
-    // Дистанции
     const ul = document.getElementById('distances');
     ul.innerHTML = '';
     for (const a of state.anchors) {
@@ -329,12 +342,69 @@ function updateSidebar() {
 }
 
 // ---------------------------------------------------------------- input
+const KEY_TO_CMD = {
+    // WASD
+    KeyW: 'forward',
+    KeyS: 'backward',
+    KeyA: 'left',
+    KeyD: 'right',
+    // Стрелки
+    ArrowUp:    'forward',
+    ArrowDown:  'backward',
+    ArrowLeft:  'left',
+    ArrowRight: 'right',
+    // Стоп
+    Space: 'stop',
+};
+
+// e.code → команда. Порядок нажатия сохраняется.
+const pressed = new Map();
+
+function recompute() {
+    if (pressed.size === 0) {
+        send({ type: 'command', value: 'stop' });
+        return;
+    }
+    // Последняя нажатая клавиша «побеждает»
+    const last = [...pressed.values()].pop();
+    send({ type: 'command', value: last });
+}
+
 document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
-    const map = { KeyW: 'forward', KeyS: 'backward', KeyA: 'left', KeyD: 'right', Space: 'stop' };
-    if (map[e.code]) { e.preventDefault(); send({ type: 'command', value: map[e.code] }); }
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.isContentEditable)) return;
+
+    const cmd = KEY_TO_CMD[e.code];
+    if (!cmd) return;
+
+    // Гасим прокрутку страницы стрелками и «прыжок» пробелом
+    e.preventDefault();
+
+    if (cmd === 'stop') {
+        pressed.clear();
+        send({ type: 'command', value: 'stop' });
+        return;
+    }
+
+    // Браузер шлёт keydown повторно при удержании — игнорируем повторы
+    if (!pressed.has(e.code)) {
+        pressed.set(e.code, cmd);
+        recompute();
+    }
 });
-document.addEventListener('keyup', () => send({ type: 'command', value: 'stop' }));
+
+document.addEventListener('keyup', (e) => {
+    if (!KEY_TO_CMD[e.code]) return;
+    pressed.delete(e.code);
+    recompute();
+});
+
+// Сброс при потере фокуса окна (Alt+Tab, переход на другую вкладку) —
+// иначе «залипшая» команда продолжит работать
+window.addEventListener('blur', () => {
+    if (pressed.size === 0) return;
+    pressed.clear();
+    send({ type: 'command', value: 'stop' });
+});
 
 document.querySelectorAll('.btn').forEach((b) => {
     const cmd = b.dataset.cmd;
